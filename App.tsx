@@ -10,7 +10,9 @@ import React, {useCallback, useEffect, useState} from 'react';
 import {
   Button,
   Image,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -199,7 +201,9 @@ function App(): JSX.Element {
         contentInsetAdjustmentBehavior="automatic"
         contentContainerStyle={styles.scrollContent}
         style={backgroundStyle}>
-        <View
+        <KeyboardAvoidingView
+          behavior={'padding'}
+          enabled={Platform.OS === 'ios'}
           style={{
             backgroundColor: Colors.white,
           }}>
@@ -343,7 +347,7 @@ function App(): JSX.Element {
               />
             )}
           </Section>
-        </View>
+        </KeyboardAvoidingView>
       </ScrollView>
 
       <Modal
