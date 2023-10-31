@@ -16,6 +16,7 @@
     "moment-duration-format": "^2.3.2",
     "react": "18.2.0",
     "react-native": "0.71.7",
+    "react-native-compressor": "^1.8.13",
     "react-native-file-viewer": "^2.1.5",
     "react-native-fs": "^2.20.0",
     "react-native-image-picker": "^5.3.1",

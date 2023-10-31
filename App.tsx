@@ -36,8 +36,14 @@ import {stat} from 'react-native-fs';
 import FileViewer from 'react-native-file-viewer';
 import Video from 'react-native-video';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Video as VideoCompressor } from 'react-native-compressor';
 
-import {Colors} from 'react-native/Libraries/NewAppScreen';
+const Colors = {
+  black: '#000000',
+  white: '#ffffff',
+  dark: '#000000',
+  lighter: '#ffffff',
+}
 
 type SectionProps = PropsWithChildren<{
   title: string;
@@ -88,6 +94,7 @@ function Section({children, title, description}: SectionProps): JSX.Element {
   );
 }
 
+let start = 0;
 function App(): JSX.Element {
   const backgroundStyle = {
     backgroundColor: Colors.lighter,
@@ -124,6 +131,7 @@ function App(): JSX.Element {
     if (!asset || !asset.uri) {
       return;
     }
+    start = Date.now();
     AsyncStorage.setItem('parameters', parameters);
     setIsExecuting(true);
     setResult(null);
@@ -139,34 +147,55 @@ function App(): JSX.Element {
         );
       }
     };
-    FFmpegKit.execute(command)
-      .then(async session => {
-        const returnCode = await session.getReturnCode();
-        if (ReturnCode.isSuccess(returnCode)) {
-          const fileSize = await stat(newAssetUri).then(
-            fileInfo => fileInfo.size,
-          );
-          const duration = await session.getDuration();
-          setResult({
-            isSuccess: true,
-            uri: newAssetUri,
-            fileSize,
-            duration,
-          });
-          // SUCCESS
-        } else if (ReturnCode.isCancel(returnCode)) {
-          console.log('cancel', returnCode);
-          // CANCEL
-        } else {
-          setResult({
-            isSuccess: false,
-            errorText: 'Error while executing command, check logs for details.',
-          });
-          console.log('err', returnCode);
-
-          // ERROR
+    VideoCompressor.compress(
+        asset.uri,
+        {
+          minimumFileSizeForCompress: 0,
+          compressionMethod: 'auto',
+        },
+        (progress) => {
+          setProgress(
+              Math.min(progress, 1),
+          )
+          console.log('Compression Progress: ', progress);
         }
-      })
+    ).then(async newAssetUri => {
+      const fileStat = await stat(newAssetUri)
+      setResult({
+                isSuccess: true,
+                uri: newAssetUri,
+                fileSize: fileStat.size,
+                duration: (Date.now() - start),
+              });
+    })
+    // FFmpegKit.execute(command)
+    //   .then(async session => {
+    //     const returnCode = await session.getReturnCode();
+    //     if (ReturnCode.isSuccess(returnCode)) {
+    //       const fileSize = await stat(newAssetUri).then(
+    //         fileInfo => fileInfo.size,
+    //       );
+    //       const duration = await session.getDuration();
+    //       setResult({
+    //         isSuccess: true,
+    //         uri: newAssetUri,
+    //         fileSize,
+    //         duration,
+    //       });
+    //       // SUCCESS
+    //     } else if (ReturnCode.isCancel(returnCode)) {
+    //       console.log('cancel', returnCode);
+    //       // CANCEL
+    //     } else {
+    //       setResult({
+    //         isSuccess: false,
+    //         errorText: 'Error while executing command, check logs for details.',
+    //       });
+    //       console.log('err', returnCode);
+    //
+    //       // ERROR
+    //     }
+    //   })
       .catch(console.warn)
       .finally(() => setIsExecuting(false));
   }, [asset, parameters]);
@@ -185,6 +214,11 @@ function App(): JSX.Element {
   const cancelExecution = useCallback(() => {
     if (isExecuting) {
       FFmpegKit.cancel();
+      setResult({
+        isSuccess: false,
+        errorText: 'Error while executing command, check logs for details.',
+      });
+      setIsExecuting(false);
     }
   }, [isExecuting]);
   const closePlayer = useCallback(() => {
